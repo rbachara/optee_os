@@ -3,7 +3,6 @@
  * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
  */
 
-#include <boot_mode.h>
 #include <drivers/qcom/cmd_db/cmd_db.h>
 #include <drivers/qcom/qfprom/qfprom.h>
 #include <drivers/qcom/rpmh/rpmh_client.h>
@@ -14,6 +13,7 @@
 #include <mm/core_memprot.h>
 #include <mm/core_mmu.h>
 #include <platform_config.h>
+#include <qcom_common.h>
 #include <stdlib.h>
 #include <stdlib_ext.h>
 #include <string.h>
@@ -34,6 +34,11 @@ static TEE_Result execute_provisioning(void)
 	bool fuses_blown = false;
 
 	COMPILE_TIME_ASSERT(sizeof(struct secdat_hdr) <= CFG_SEC_ELF_DDR_SIZE);
+
+	/* Configure MRC before the sec.elf path and its DLOAD gate. */
+	res = qcom_secboot_provision_mrc_fuses();
+	if (res)
+		EMSG("MRC provisioning failed: %#"PRIx32, res);
 
 	if (qcom_is_dload_mode(&dload_mode) != TEE_SUCCESS)
 		panic("Failed to determine boot mode");

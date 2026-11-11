@@ -8,6 +8,7 @@
 
 #include <clock_group.h>
 #include <platform_config.h>
+#include <qfprom_common.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <tee_api_types.h>
@@ -34,24 +35,8 @@
 #define QFPROM_BLOW_TIMER_CLK_FREQ_MHZ_X10      48
 #define QFPROM_FUSE_BLOW_TIME_IN_US             5
 
-#define QFPROM_GATELAST_VAL                     0x1
 #define QFPROM_TRIPPT_SEL_VAL                   0x4
 #define QFPROM_ACCEL_VAL                        0x10
-
-#define QFPROM_GATELAST_SHFT                    11
-#define QFPROM_TRIPPT_SEL_SHFT                  8
-#define QFPROM_ACCEL_SHFT                       0
-
-#define QFPROM_ACCEL_VALUE \
-	((QFPROM_GATELAST_VAL << QFPROM_GATELAST_SHFT) | \
-	 (QFPROM_TRIPPT_SEL_VAL << QFPROM_TRIPPT_SEL_SHFT) | \
-	 (QFPROM_ACCEL_VAL << QFPROM_ACCEL_SHFT))
-
-#define QFPROM_ACCEL_RESET_VALUE \
-	(0x1 << QFPROM_GATELAST_SHFT)
-
-#define QFPROM_RAW_TO_CORR(raw_addr) \
-	((raw_addr) + (QFPROM_CORR_BASE - QFPROM_RAW_BASE))
 
 #define LCM_ADDR                                0x00780120
 #define PRI_KEY_DERIVATION_KEY_ADDR             0x00780128
@@ -228,6 +213,17 @@ enum qfprom_perm_bit_pos {
 #define OEM_SPARE_30_PERM_MASK			BIT(OEM_SPARE_30)
 #define OEM_SPARE_31_PERM_MASK			BIT(OEM_SPARE_31)
 
+/* OEM_CONFIG_REGION row 2; EN bit is row[1] & PIL_ARB_EN_BMSK. */
+#define PIL_ARB_EN_RAW_ADDR			0x007801B8
+#define PIL_ARB_EN_BMSK				BIT(2)
+#define PIL_ARB_MSB_ENABLED			1
+#define PIL_ARB_LSB_MAX_VERSION			32
+#define PIL_ARB_MSB_MAX_VERSION			28
+
+#define OEM_CONFIG0_OFFSET			0x604c
+#define ROOT_CERT_TOTAL_NUM_BMSK		GENMASK_32(18, 17)
+#define ROOT_CERT_TOTAL_NUM_SHFT		17
+
 #define OEM_CONFIG2_OFFSET			0x6054
 #define EKU_ENFORCEMENT_EN_SHFT			30
 #define SEGMENT_HASH_FUNCTION_SELECT0_SHFT	16
@@ -235,6 +231,7 @@ enum qfprom_perm_bit_pos {
 #define SECURE_BOOT_APPS_OFFSET			0x606c
 #define SECURE_BOOT_AUTH_EN_BMSK		BIT(5)
 #define SECURE_BOOT_USE_SERIAL_NUM_BMSK		BIT(6)
+#define SECURE_BOOT_PK_HASH_IN_FUSE_BMSK	BIT(4)
 
 #define JTAG_ID_OFFSET				0x6130
 #define JTAG_ID_AUTH_BMSK			GENMASK_32(27, 0)
@@ -249,6 +246,17 @@ enum qfprom_perm_bit_pos {
 
 #define PK_HASH0_OFFSET				0x6190
 #define QFPROM_ROOT_OF_TRUST_BYTE_SIZE		48
+
+#define MRC_STICKY_BIT_OFFSET			0x61f0
+#define MRC_STICKY_BIT_BMSK			BIT(3)
+
+#define MRC_ACTIVATION_LIST_OFFSET		0x6268
+#define MRC_REVOCATION_LIST_OFFSET		0x6270
+#define MRC_ROOT_CERT_LIST_BMSK			GENMASK_32(3, 0)
+
+/* MRC_2_0 region: activation = row 0, revocation = row 1. */
+#define MRC_ACTIVATION_LIST_RAW_ADDR		0x00780148
+#define MRC_REVOCATION_LIST_RAW_ADDR		0x00780150
 
 #define TCSR_SOC_HW_VERSION_ADDR		0x01FC8000
 #define SOC_HW_VERSION_FAM_DEV_BMSK		0xffff0000

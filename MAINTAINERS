@@ -215,6 +215,11 @@ S:	Maintained
 F:	ldelf/ftrace.c
 F:	lib/libutils/ext/ftrace/
 
+Google
+R:	Kuan-Wei Chiu <visitorckw@gmail.com> [@visitorckw]
+S:	Maintained
+F:	core/arch/arm/plat-google/
+
 HiSilicon D02
 S:	Orphan
 F:	core/arch/arm/plat-d02/
@@ -356,11 +361,6 @@ Renesas RCAR
 R:	Volodymyr Babchuk <vlad.babchuk@gmail.com> [@lorc]
 S:	Maintained
 F:	core/arch/arm/plat-rcar/
-
-Renesas RCAR Gen5
-R:	Marek Vasut <marek.vasut+renesas@mailbox.org> [@marex]
-S:	Maintained
-F:	core/arch/arm/plat-rcar_gen5/
 
 Renesas RZ/G2
 R:	Lad Prabhakar <prabhakar.mahadev-lad.rj@bp.renesas.com> [@prabhakarlad]

@@ -7,17 +7,13 @@
 #define __QFPROM_PRIV_H__
 
 #include <drivers/qcom/qfprom/qfprom.h>
-#include <drivers/qcom/rpmh/rpmh_client.h>
 #include <mm/core_mmu.h>
 #include <qfprom_target.h>
+#include <util.h>
 
 #define QFPROM_BLOW_TIMEOUT_US		1000
 #define QFPROM_FEC_REGION_LSB_MAX	32
 #define QFPROM_FEC_REGION_MSB_MAX	64
-
-#define QFPROM_VREG_MODE_RET	U(3)
-#define QFPROM_VREG_MODE_LPM	U(5)
-#define QFPROM_VREG_MODE_NPM	U(7)
 
 enum qfprom_fec_scheme {
 	QFPROM_FEC_NONE = 0,
@@ -65,7 +61,6 @@ struct qfprom_context {
 	vaddr_t raw_base;
 	vaddr_t corr_base;
 	vaddr_t mutex_reg;
-	struct rpmh_client *rpmh_handle;
 	uint32_t clock_cfg;
 	bool clock_saved;
 	bool write_op_allowed;
@@ -81,13 +76,27 @@ struct qfprom_context *qfprom_get_context(void);
 TEE_Result qfprom_write_set_clock_settings(void);
 TEE_Result qfprom_write_reset_clock_settings(void);
 
-TEE_Result qfprom_vote_supply(struct rpmh_client *handle, const char *name,
-			      uint32_t voltage_mv, uint32_t off_mode,
-			      bool enable);
-
 TEE_Result qfprom_acquire_hw_mutex(void);
 TEE_Result qfprom_release_hw_mutex(void);
 
 const struct qfprom_platform_config *qfprom_get_platform_config(void);
+
+/*
+ * PIL anti-rollback fuse counter access, implemented per-platform in
+ * <platform>/qfprom_pil_arb.c — row layout is private to that file.
+ */
+TEE_Result qfprom_target_read_pil_arb(uint32_t *lsb, uint32_t *msb);
+TEE_Result qfprom_target_write_pil_arb_lsb(uint32_t version);
+TEE_Result qfprom_target_write_pil_arb_msb(uint32_t version);
+
+/* Unary counter mask for the low @n bits; used when blowing ARB fuses. */
+static inline uint32_t unary_mask(uint32_t n)
+{
+	if (n >= 32)
+		return 0xffffffffu;
+	if (!n)
+		return 0;
+	return GENMASK_32(n - 1, 0);
+}
 
 #endif /* __QFPROM_PRIV_H__ */

@@ -8,6 +8,9 @@
 
 #include <mm/generic_ram_layout.h>
 
+#define CACHELINE_LEN		64
+#define STACK_ALIGNMENT		CACHELINE_LEN
+
 /* UART settings */
 #define CONSOLE_UART_BASE  0x10C02000
 #define CONSOLE_BAUDRATE       115200
@@ -21,5 +24,9 @@
 /* DDR memory for dynamic shared memory */
 #define DRAM0_BASE 0x80000000
 #define DRAM0_SIZE 0x70000000  /* 1792 MB */
+
+/* System Manager - needed by sdm_svc PTA for SDM DMA control */
+#define SYSMGR_BASE		0x10D12000
+#define SYSMGR_SIZE		0x1000
 
 #endif /* __PLATFORM_CONFIG_H */

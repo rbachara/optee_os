@@ -382,28 +382,38 @@ TEE_Result qfprom_read_row(uint32_t addr,
 	return TEE_SUCCESS;
 }
 
-TEE_Result qfprom_is_secboot_write_disabled(bool *write_disabled)
+TEE_Result qfprom_read_row_locked(uint32_t addr, enum qfprom_addr_space type,
+				  uint32_t *data)
 {
 	TEE_Result res = TEE_ERROR_GENERIC;
 	TEE_Result release_res = TEE_SUCCESS;
+
+	res = qfprom_acquire_hw_mutex();
+	if (res)
+		return res;
+
+	res = qfprom_read_row(addr, type, data);
+	release_res = qfprom_release_hw_mutex();
+
+	return res != TEE_SUCCESS ? res : release_res;
+}
+
+TEE_Result qfprom_is_secboot_write_disabled(bool *write_disabled)
+{
+	TEE_Result res = TEE_ERROR_GENERIC;
 	uint32_t data[2] = {0};
 
 	if (!write_disabled)
 		return TEE_ERROR_BAD_PARAMETERS;
 
 	*write_disabled = false;
-	res = qfprom_acquire_hw_mutex();
-	if (res != TEE_SUCCESS)
-		return res;
-
-	res = qfprom_read_row(WRITE_PERMISSION_ADDR, QFPROM_ADDR_SPACE_CORR,
-			      data);
+	res = qfprom_read_row_locked(WRITE_PERMISSION_ADDR,
+				     QFPROM_ADDR_SPACE_CORR, data);
 	if (res == TEE_SUCCESS)
 		*write_disabled = data[0] & OEM_SECURE_BOOT_PERM_MASK;
 
 	memzero_explicit(data, sizeof(data));
-	release_res = qfprom_release_hw_mutex();
-	return res != TEE_SUCCESS ? res : release_res;
+	return res;
 }
 
 static TEE_Result qfprom_hw_cleanup(void)
@@ -460,9 +470,9 @@ err_deinit:
 TEE_Result qfprom_hw_deinit(void)
 {
 	TEE_Result res = qfprom_hw_cleanup();
+	TEE_Result release_res = qfprom_release_hw_mutex();
 
-	qfprom_release_hw_mutex();
-	return res;
+	return res != TEE_SUCCESS ? res : release_res;
 }
 
 TEE_Result qfprom_write_row(uint32_t addr, uint32_t *data)
@@ -584,13 +594,6 @@ static TEE_Result qfprom_init(void)
 	}
 
 	drv->corr_base = QFPROM_RAW_TO_CORR(drv->raw_base);
-
-	/* Cleanup releases supply votes before setup, so both need it. */
-	drv->rpmh_handle = rpmh_create_handle(RSC_DRV_SECURE, "qfprom");
-	if (!drv->rpmh_handle) {
-		EMSG("RPMH client creation failed");
-		goto err_panic;
-	}
 
 	return TEE_SUCCESS;
 

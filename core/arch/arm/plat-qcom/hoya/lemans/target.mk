@@ -21,23 +21,29 @@ ifeq ($(CFG_QCOM_PAS_PTA),y)
 CFG_RESERVED_VASPACE_SIZE ?= (256 * 1024 * 1024)
 CFG_IN_TREE_EARLY_TAS += qcom_pas/cff7d191-7ca0-4784-af13-48223b9a4fbe
 CFG_QCOM_PAS_AUTH ?= y
+$(call force,CFG_QCOM_CLK_HOYA_PAS,y)
 endif
 
 CFG_QCOM_HWKM ?= y
 
 ifeq ($(CFG_QCOM_PAS_AUTH),y)
 $(call force,CFG_QCOM_FUSE_PTA,y)
-CFG_PAS_MD_SLOTS = 8
 # This chip's OEM_CONFIG2 fuse row has a per-root-cert hash function
 # select bit; targets without it always use SHA-384.
 $(call force,CFG_QCOM_SEGMENT_HASH_SELECT,y)
+# OEM-provisioned multi-root-certificate bitmasks (bit N = root cert N).
+# Zero masks still require the per-boot activation lock to be reasserted.
+CFG_QCOM_MRC_ACTIVATION_LIST ?= 0
+CFG_QCOM_MRC_REVOCATION_LIST ?= 0
 endif
 
 ifneq ($(filter y,$(CFG_QCOM_QFPROM_FUSEPROV) $(CFG_QCOM_FUSE_PTA)),)
 $(call force,CFG_QCOM_QFPROM,y)
+$(call force,CFG_QCOM_QFPROM_RPMH_CLIENT,y)
+$(call force,CFG_QCOM_QFPROM_SECBOOT,y)
 endif
 
-ifeq ($(CFG_QCOM_QFPROM),y)
+ifeq ($(CFG_QCOM_QFPROM_RPMH_CLIENT),y)
 # Fuse blowing needs the smpa4 supply rail the SoC requires for
 # programming, voted over RPMH.
 $(call force,CFG_QCOM_RPMH_CLIENT,y)

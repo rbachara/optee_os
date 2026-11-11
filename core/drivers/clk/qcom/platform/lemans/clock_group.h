@@ -12,57 +12,34 @@
 #define GCC_SEC_CTRL_CMD_RCGR			0x39034
 #define QFPROM_CLOCK_DIVIDE			0x7
 
-#define GCC_TURING_0_CFG_AHB_CLK		0x41028
-#define GCC_TURING_1_CFG_AHB_CLK		0x12028
-
 /*
- * Turing/NSP clock-controller register offsets, identical for both NSP
- * instances; only the subsystem base differs (TURING_0_BASE / TURING_1_BASE).
+ * PAS per-instance registers; the sequences and the subsystem register
+ * layout are in hoya/clock_hoya.h.
  */
-#define TURINGNSP_CC_OFFSET			0x02008000
-#define TURINGNSP_Q6SS_ALT_RESET_AON		0x418
-#define TURINGNSP_Q6SS_AHBS_AON			0x414
-#define TURINGNSP_Q6SS_ALT_RESET_CTL		0x10034
-#define TURINGNSP_NSPNOC			0x22c
-#define TURINGNSP_VAPSS_GDSCR			0x80
 
-/*
- * Additional Turing CC / QDSP6 PUB register offsets used by the reset sequence
- * (within the Turing CC and QDSP6 PUB blocks respectively).
- */
-#define TURINGNSP_NSPAUX_XO_CBCR		0x40
-#define TURINGNSP_NSPAUX_GDSCR			0x200
-#define TURINGNSP_QDSP6SS_RET_CFG		0x1c
-
-#define NSPAUX_GDSCR_RETAIN_FF_ENABLE_BIT	BIT(11)
-#define Q6SS_ALT_RESET_CTL_ALT_ARES_BYPASS_BIT	BIT(0)
-#define QDSP6SS_RET_CFG_RET_ARES_ENA_BIT	BIT(0)
-
-/*
- * Global blocks involved in the Turing reset (offsets within each window);
- * the GCC config-NoC AHB CBCRs gate the SWAY NIU socket.
- */
+/* GCC config-NoC AHB and aggre-NoC AXI branches (within the GCC window) */
 #define GCC_TURING_0_CFG_AHB_CBCR		0x41028
 #define GCC_TURING_1_CFG_AHB_CBCR		0x12028
-#define CBCR_CLK_ENABLE_BIT			BIT(0)
+#define GCC_GPDSP_0_CFG_AHB_CBCR		0x16008
+#define GCC_AGGRE_NOC_GPDSP_0_AXI_CBCR		0x16004
+#define GCC_GPDSP_1_CFG_AHB_CBCR		0x15008
+#define GCC_AGGRE_NOC_GPDSP_1_AXI_CBCR		0x15004
 
-/* AOSS_CC compute-subsystem restart (within AOSS_CC window). */
-#define AOSS_CC_COMPUTESS_RESTART		0x4f030
+/* AOSS_CC_COMPUTESS_RESTART and AOSS_CC_GPDSP_RESTART bits */
 #define COMPUTESS_RESTART_SS_0_BIT		BIT(0)
 #define COMPUTESS_RESTART_SS_1_BIT		BIT(1)
+#define GPDSP_RESTART_SS_0_BIT			BIT(0)
+#define GPDSP_RESTART_SS_1_BIT			BIT(1)
 
-/* RPMH PDC global sync-reset (within RPMH_PDC_GLOBAL window). */
-#define RPMH_PDC_SYNC_RESET			0x1000
+/* RPMH_PDC_SYNC_RESET bits */
+#define PDC_SYNC_RESET_GPDSP0_BIT		BIT(1)
 #define PDC_SYNC_RESET_COMPUTE_BIT		BIT(9)
+#define PDC_SYNC_RESET_GPDSP1_BIT		BIT(10)
 #define PDC_SYNC_RESET_NSP_BIT			BIT(12)
 
-/* RPMH PDC per-block mode status, drv0 (within each PDC window). */
-#define RPMH_PDC_MODE_STATUS_DRV0		0x1030
-#define PDC_MODE_STATUS_SEQ_BUSY_BIT		BIT(0)
-
 /*
- * TCSR Turing master-halt / power registers (offsets within the TCSR mutex
- * window); the CDSP1 block sits 0x18 above CDSP0.
+ * TCSR master-halt and power registers (within the TCSR mutex window). The
+ * CDSP1 block sits 0x18 above CDSP0, the GP-DSP1 block 0x14 above GP-DSP0.
  */
 #define TCSR_TURING_HALTREQ			0x34000
 #define TCSR_TURING_HALTACK			0x34004
@@ -101,15 +78,6 @@
 						  (Q6RCG_SRC_SEL_SHIFT)) | \
 						 (Q6RCG_SRC_DIV))
 
-/* Q6 Lucid-EVO PLL settings, identical for both NSP instances. */
-#define TURINGNSP_Q6_PLL_L_VAL			0x32
-#define TURINGNSP_Q6_PLL_CAL_L_VAL		0x44
-#define TURINGNSP_Q6_PLL_CONFIG_CTL		0x20485699
-#define TURINGNSP_Q6_PLL_CONFIG_CTL_U		0x00182261
-#define TURINGNSP_Q6_PLL_CONFIG_CTL_U1		0x32AA299C
-#define TURINGNSP_Q6_PLL_USER_CTL		0x00000000
-#define TURINGNSP_Q6_PLL_USER_CTL_U		0x00400805
-
 /*
  * LPASS / ADSP (QDSP6 v68/v69). All offsets are relative to LPASS_BASE; the
  * subsystem window is mapped once by the PAS PTA (pas_platform_mem_setup), so
@@ -123,7 +91,6 @@
 #define LPASS_MCC_OFFSET			0x008d0000
 #define LPASS_CORE_HM_CC_OFFSET			0x00d00000
 #define LPASS_TOP_CC_OFFSET			0x01000000
-#define LPASS_AG_NOC_SBM_OFFSET	(LPASS_AG_NOC_SBM_BASE - LPASS_BASE)
 
 /* Offsets within the QDSP6 PUB block (LPASS_PUB_OFFSET). */
 #define LPASS_QDSP6SS_RST_EVB			0x10
@@ -205,19 +172,6 @@
 #define LPASS_AG_NOC_SBM_PORT1_BIT		BIT(1)
 
 /*
- * LPASS Q6 Lucid-EVO PLL settings, taken from the reference clock driver
- * HALclkPLLSettings.h (HAL_CLK_LPASS_AON_CC_LPASS_QDSP6SS_PLL_*). Identical to
- * the Turing Q6 PLL except for the L value.
- */
-#define LPASS_Q6_PLL_L_VAL			0x2C
-#define LPASS_Q6_PLL_CAL_L_VAL			0x44
-#define LPASS_Q6_PLL_CONFIG_CTL			0x20485699
-#define LPASS_Q6_PLL_CONFIG_CTL_U		0x00182261
-#define LPASS_Q6_PLL_CONFIG_CTL_U1		0x32AA299C
-#define LPASS_Q6_PLL_USER_CTL			0x00000000
-#define LPASS_Q6_PLL_USER_CTL_U			0x00400805
-
-/*
  * GP-DSP0 / GP-DSP1 (TURINGGDSP / TURINGGDSP1, QDSP6 v68/v69) sub-block offsets
  * relative to TURING_GDSP_{0,1}_BASE; identical for both instances.
  */
@@ -272,18 +226,6 @@
 #define TCSR_GPDSP1_IL0_MASTER_IDLE		0x3201c
 #define TCSR_GPDSP1_IL1_MASTER_IDLE		0x32020
 #define TCSR_GPDSP1_PWR_ON			0x32024
-
-/*
- * GP-DSP Q6 Lucid-EVO PLL settings, identical for both instances; differs from
- * the Turing NSP Q6 PLL only in the L value.
- */
-#define GPDSP_Q6_PLL_L_VAL			0x3A
-#define GPDSP_Q6_PLL_CAL_L_VAL			0x44
-#define GPDSP_Q6_PLL_CONFIG_CTL			0x20485699
-#define GPDSP_Q6_PLL_CONFIG_CTL_U		0x00182261
-#define GPDSP_Q6_PLL_CONFIG_CTL_U1		0x32AA299C
-#define GPDSP_Q6_PLL_USER_CTL			0x00000000
-#define GPDSP_Q6_PLL_USER_CTL_U			0x00400805
 
 #ifdef CFG_QCOM_CLK_CFG
 /*

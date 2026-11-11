@@ -388,6 +388,7 @@ int spmc_sp_add_share(struct ffa_mem_transaction_x *mem_trans,
 	/* Check if the region descriptors fit into the buffer */
 	if (MUL_OVERFLOW(addr_range_cnt, sizeof(*addr_range), &needed_size) ||
 	    ADD_OVERFLOW(needed_size, addr_range_offs, &needed_size) ||
+	    ADD_OVERFLOW(needed_size, sizeof(*mem_reg), &needed_size) ||
 	    needed_size > blen) {
 		res = FFA_INVALID_PARAMETERS;
 		goto cleanup;
@@ -470,10 +471,13 @@ int spmc_sp_resume_from_preempted(uint16_t endpoint_id, uint16_t thread_id)
 	if (!sp_sess)
 		return FFA_INVALID_PARAMETERS;
 
-	if (sp_sess->state != sp_preempted || sp_sess->thread_id != thread_id)
-		return FFA_DENIED;
-
 	cpu_spin_lock(&sp_sess->spinlock);
+	if (sp_sess->state != sp_preempted ||
+	    sp_sess->thread_id != thread_id) {
+		cpu_spin_unlock(&sp_sess->spinlock);
+		return FFA_DENIED;
+	}
+
 	sp_sess->state = sp_busy;
 	cpu_spin_unlock(&sp_sess->spinlock);
 
@@ -1133,7 +1137,7 @@ ffa_handle_sp_direct_resp(struct thread_smc_1_2_regs *args,
 			}
 
 			/* The SP must be subscribed for this message */
-			if (!(dst->props & FFA_PART_PROP_NOTIF_CREATED)) {
+			if (!(caller_sp->props & FFA_PART_PROP_NOTIF_CREATED)) {
 				ffa_set_error(args, FFA_INVALID_PARAMETERS);
 				return caller_sp;
 			}
@@ -1146,7 +1150,8 @@ ffa_handle_sp_direct_resp(struct thread_smc_1_2_regs *args,
 			}
 
 			/* The SP must be subscribed for this message */
-			if (!(dst->props & FFA_PART_PROP_NOTIF_DESTROYED)) {
+			if (!(caller_sp->props &
+			      FFA_PART_PROP_NOTIF_DESTROYED)) {
 				ffa_set_error(args, FFA_INVALID_PARAMETERS);
 				return caller_sp;
 			}
